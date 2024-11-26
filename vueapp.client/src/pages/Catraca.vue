@@ -85,10 +85,8 @@
           this.mensagemResultado = `Ação "${this.acao}" não é válida no estado "${this.estadoAtual}".`;
         }
 
-        // Atualizar o grafo para destacar o estado atual
         this.atualizarGrafo();
 
-        // Resetar a ação selecionada
         this.acao = "";
       },
       criarGrafo() {

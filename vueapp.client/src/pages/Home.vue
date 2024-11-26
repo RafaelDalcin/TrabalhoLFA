@@ -195,7 +195,7 @@
         }
 
         // Verificar se o estado final foi alcançado após consumir todos os símbolos
-        if (this.af.estadosFinais.includes(estadoAtual)) {
+        if (this.af.estadosFinais.includes(estadoAtual) || estadoAtual == null) {
           this.mensagemResultado = `A string "${this.stringEntrada}" é aceita pela linguagem.`;
         } else {
           this.mensagemResultado = `A string "${this.stringEntrada}" não é aceita pela linguagem.`;
