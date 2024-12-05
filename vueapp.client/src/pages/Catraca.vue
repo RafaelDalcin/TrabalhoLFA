@@ -12,15 +12,9 @@
         <section>
           <h2>Simular Ação</h2>
           <form @submit.prevent="simularAcao">
-            <label>Selecione a Ação:</label>
-            <select v-model="acao">
-              <option disabled value="">Escolha uma ação</option>
-              <option value="VeículoDetectado">Veículo Detectado</option>
-              <option value="PagamentoValidado">Pagamento Validado</option>
-              <option value="CatracaAberta">Catraca Aberta</option>
-              <option value="ErroPagamento">Erro no Pagamento</option>
-            </select>
-            <button type="submit">Executar Ação</button>
+            <label>Veículo Detectado! Informe o CPF:</label>
+            <input type="text" v-model="cpf" id="cpf" placeholder="CPF (somente números)" />
+            <button type="submit">Validar CPF</button>
           </form>
         </section>
 
@@ -37,9 +31,6 @@
   </main>
 </template>
 
-
-
-
 <script>
   import { Network } from "vis-network/standalone";
 
@@ -47,8 +38,7 @@
     name: "SimuladorEstacionamento",
     data() {
       return {
-        // Estados e transições do autômato no formato S0, S1, ...
-        estados: ["S0", "S1", "S2"],
+        estados: ["S0", "S1", "S2", "FechandoCatraca"],
         estadoInicial: "S0",
         estadoAtual: "S0",
         transicoes: {
@@ -60,35 +50,88 @@
             ErroPagamento: "S0",
           },
           S2: {
-            CatracaAberta: "S0",
+            CatracaAberta: "FechandoCatraca",
+          },
+          FechandoCatraca: {
+            CatracaFechada: "S0",
           },
         },
 
-        // Dados de interação
-        acao: "",
+        cpf: "",
         mensagemResultado: "",
         grafo: null,
       };
     },
     methods: {
       simularAcao() {
-        if (!this.acao) {
-          this.mensagemResultado = "Por favor, selecione uma ação.";
+        if (!this.cpf) {
+          this.mensagemResultado = "Por favor, insira um CPF.";
           return;
         }
 
-        const proximoEstado = this.transicoes[this.estadoAtual]?.[this.acao];
-        if (proximoEstado) {
-          this.estadoAtual = proximoEstado;
-          this.mensagemResultado = `Ação "${this.acao}" realizada com sucesso. Novo estado: "${this.estadoAtual}".`;
-        } else {
-          this.mensagemResultado = `Ação "${this.acao}" não é válida no estado "${this.estadoAtual}".`;
+        // Validar o CPF
+        if (!this.validarCPF(this.cpf)) {
+          this.estadoAtual = "S0";
+          this.mensagemResultado = "CPF inválido! Retornando para o estado inicial.";
+          this.atualizarGrafo();
+          return;
         }
+
+        
+        this.estadoAtual = "S1";
+        this.mensagemResultado = "CPF válido! Passando para 'Pagamento Validado'.";
 
         this.atualizarGrafo();
 
-        this.acao = "";
+        
+        setTimeout(() => {
+          this.estadoAtual = "S2";
+          this.mensagemResultado = "Pagamento validado! Abrindo a catraca.";
+          this.atualizarGrafo();
+
+          setTimeout(() => {
+            this.estadoAtual = "FechandoCatraca"; 
+            this.mensagemResultado = "A catraca foi aberta! Agora fechando...";
+            this.atualizarGrafo();
+
+            
+            setTimeout(() => {
+              this.estadoAtual = "S0";
+              this.mensagemResultado = "Catraca fechada, retornando ao estado inicial.";
+              this.atualizarGrafo();
+            }, 2000);
+          }, 2000);
+        }, 2000); 
       },
+
+      validarCPF(cpf) {
+        cpf = cpf.replace(/\D/g, '');
+        if (cpf.length !== 11) return false;
+
+        const digitos = cpf.split('').map(Number);
+        let soma = 0;
+        let peso = 10;
+        for (let i = 0; i < 9; i++) {
+          soma += digitos[i] * peso;
+          peso--;
+        }
+        let primeiroDigito = 11 - (soma % 11);
+        if (primeiroDigito >= 10) primeiroDigito = 0;
+
+        soma = 0;
+        peso = 11;
+        for (let i = 0; i < 10; i++) {
+          soma += digitos[i] * peso;
+          peso--;
+        }
+        let segundoDigito = 11 - (soma % 11);
+        if (segundoDigito >= 10) segundoDigito = 0;
+
+        let valido = primeiroDigito === digitos[9] && segundoDigito === digitos[10]
+
+        return valido;
+      },
+
       criarGrafo() {
         const nodes = this.estados.map((estado) => ({
           id: estado,
@@ -104,16 +147,15 @@
               to: para,
               label: acao,
               font: {
-                align: "top", // Define a posição padrão das etiquetas
+                align: "top",
               },
               smooth: {
-                enabled: true, // Habilita suavidade para evitar sobreposição
-                type: "curvedCCW", // Aplica curvas às arestas
+                enabled: true,
+                type: "curvedCCW",
               },
             });
           }
         }
-
 
         const container = document.getElementById("network-container");
         const data = { nodes, edges };
@@ -144,25 +186,30 @@
 
         this.grafo = new Network(container, data, options);
       },
+
       atualizarGrafo() {
-        const nodes = this.estados.map((estado) => ({
-          id: estado,
-          label: estado,
-          color: estado === this.estadoAtual ? "#ff5722" : "#ffffff",
-        }));
+        this.$nextTick(() => {
+          if (this.grafo) {
+            const nodes = this.estados.map((estado) => ({
+              id: estado,
+              label: estado,
+              color: estado === this.estadoAtual ? "#ff5722" : "#ffffff",
+            }));
 
-        const edges = [];
-        for (const [de, transicoes] of Object.entries(this.transicoes)) {
-          for (const [acao, para] of Object.entries(transicoes)) {
-            edges.push({
-              from: de,
-              to: para,
-              label: acao,
-            });
+            const edges = [];
+            for (const [de, transicoes] of Object.entries(this.transicoes)) {
+              for (const [acao, para] of Object.entries(transicoes)) {
+                edges.push({
+                  from: de,
+                  to: para,
+                  label: acao,
+                });
+              }
+            }
+
+            this.grafo.setData({ nodes, edges });
           }
-        }
-
-        this.grafo.setData({ nodes, edges });
+        });
       },
     },
     mounted() {
@@ -170,8 +217,6 @@
     },
   };
 </script>
-
-
 
 <style scoped>
   h1, h2, p {

@@ -78,7 +78,6 @@
             return null;
           }
 
-          // Adicionar as produções ao mapa de produções
           if (!producoesPorNaoTerminal[de]) {
             producoesPorNaoTerminal[de] = [];
           }
@@ -89,15 +88,14 @@
             // Exemplo de produção "A -> aB", onde "a" é terminal e "B" é não-terminal
             producoesPorNaoTerminal[de].push(alt);
           });
-        }).filter(producao => producao !== null); // Filtrar produções inválidas
+        }).filter(producao => producao !== null);
 
-        // Verificar se as produções foram processadas corretamente
+
         if (Object.keys(producoesPorNaoTerminal).length === 0) {
           this.mensagemResultado = 'Nenhuma produção válida encontrada.';
           return;
         }
 
-        // Construir a gramática
         this.gramatica = {
           terminais: this.terminais.split(",").map(t => t.trim()),
           naoTerminais: this.naoTerminais.split(",").map(nt => nt.trim()),
@@ -105,10 +103,8 @@
           producoesPorNaoTerminal
         };
 
-        // Gerar o autômato finito a partir da gramática
         this.af = this.criarAutomato();
 
-        // Indicar que a gramática foi definida corretamente
         this.gramaticaDefinida = true;
         this.mensagemResultado = 'Gramática definida com sucesso.';
       },
@@ -119,12 +115,10 @@
         const estadosFinais = [];
         const estadoInicial = this.gramatica.simboloInicial;
 
-        // Inicializar transições para cada não-terminal
         this.gramatica.naoTerminais.forEach(nt => {
           transicoes[nt] = [];
         });
 
-        // Processar as produções para gerar as transições
         Object.keys(this.gramatica.producoesPorNaoTerminal).forEach(de => {
           const producoes = this.gramatica.producoesPorNaoTerminal[de];
 
@@ -139,6 +133,7 @@
                 transicoes[de].push({ simbolo: producao, destino: null }); // Transição para nenhum outro estado
                 estadosFinais.push(de); // O estado é final
               } else {
+
                 // Produção no formato "aB" onde "a" é um terminal e "B" é um não-terminal
                 const simbolo = producao[0]; // O primeiro símbolo é o terminal
                 const destino = producao.slice(1); // O restante é o não-terminal de destino
@@ -150,7 +145,6 @@
           });
         });
 
-        // Definir o autômato com estados e transições
         return {
           estados: [...this.gramatica.naoTerminais, ...this.gramatica.terminais],
           estadoInicial,
@@ -168,33 +162,33 @@
         }
 
         let estadoAtual = this.af.estadoInicial;
-        let i = 0; // Índice da string para iteração
+        let i = 0;
 
-        // Processar a string e verificar se é aceita pelo autômato
+
         while (i < this.stringEntrada.length) {
           const simbolo = this.stringEntrada[i];
           let transicaoEncontrada = false;
 
-          // Verificar se o estado atual tem transições para o símbolo
+
           if (this.af.transicoes[estadoAtual]) {
             for (let transicao of this.af.transicoes[estadoAtual]) {
               if (transicao.simbolo === simbolo) {
                 estadoAtual = transicao.destino;
                 transicaoEncontrada = true;
-                i++; // Avançar para o próximo símbolo da string
+                i++; 
                 break;
               }
             }
           }
 
-          // Se não encontrar transição para o símbolo atual, rejeita a string
+
           if (!transicaoEncontrada) {
             this.mensagemResultado = `A string "${this.stringEntrada}" não é aceita pela linguagem.`;
             return;
           }
         }
 
-        // Verificar se o estado final foi alcançado após consumir todos os símbolos
+
         if (this.af.estadosFinais.includes(estadoAtual) || estadoAtual == null) {
           this.mensagemResultado = `A string "${this.stringEntrada}" é aceita pela linguagem.`;
         } else {
